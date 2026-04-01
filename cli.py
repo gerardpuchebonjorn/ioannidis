@@ -1,0 +1,144 @@
+"""
+cli.py
+
+Command-line interface for the LAI harmonization pipeline.
+
+Usage:
+  python cli.py \
+    --input-vcf path/to/input.vcf.gz \
+    --workdir path/to/workdir \
+    --model-vcf-template "path/to/chr{chrom}.admx.vcf.gz" \
+    --reference-vcf-template "path/to/chr{chrom}.snps.vcf.gz" \
+    --beagle-jar path/to/beagle.jar \
+    --threads 16
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from lai_pipeline.pipeline import LAIPipeline, ToolConfig, Templates
+
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        description=(
+            "LAI harmonization pipeline: harmonizes any input VCF to match "
+            "the format expected by a Local Ancestry Inference model."
+        )
+    )
+
+    # --- Required inputs ---
+    ap.add_argument("--input-vcf", required=True, type=Path,
+                    help="Input VCF file to harmonize (.vcf.gz).")
+    ap.add_argument("--workdir", required=True, type=Path,
+                    help="Directory where intermediate and output files will be saved.")
+    ap.add_argument("--model-vcf-template", required=True,
+                    help="Path template for per-chromosome model VCFs. Use {chrom} as placeholder. "
+                         "E.g. '/data/model/chr{chrom}.admx.vcf.gz'")
+
+    # --- Optional inputs ---
+    ap.add_argument("--reference-vcf-template", default=None,
+                    help="Path template for per-chromosome reference panel VCFs (required for imputation). "
+                         "E.g. '/data/ref/chr{chrom}.snps.vcf.gz'")
+    ap.add_argument("--reference-fasta", type=Path, default=None,
+                    help="Reference genome FASTA file. Used to normalize the input VCF if QC fails.")
+    ap.add_argument("--genetic-map-template", default=None,
+                    help="Path template for per-chromosome genetic maps used by Beagle. "
+                         "E.g. '/data/maps/chr{chrom}.map'")
+
+    # --- Imputation ---
+    ap.add_argument("--impute-engine", choices=["beagle", "none"], default="beagle",
+                    help="Imputation engine to use (default: beagle).")
+    ap.add_argument("--beagle-jar", type=Path, default=None,
+                    help="Path to Beagle JAR file (required if --impute-engine is beagle).")
+
+    # --- Tools ---
+    ap.add_argument("--bcftools", default="bcftools",
+                    help="Path to bcftools executable (default: bcftools).")
+    ap.add_argument("--java", default="java",
+                    help="Path to java executable (default: java).")
+    ap.add_argument("--threads", type=int, default=8,
+                    help="Number of threads for Beagle (default: 8).")
+
+    # --- QC ---
+    ap.add_argument("--qc-strict", action="store_true",
+                    help="If set, QC failures stop the pipeline with an error.")
+    ap.add_argument("--min-exact-match-pct", type=float, default=99.999,
+                    help="Minimum allele exact match %% required to pass QC (default: 99.999).")
+    ap.add_argument("--allow-inversions", action="store_true",
+                    help="Allow inverted REF/ALT alleles without failing QC.")
+    ap.add_argument("--allow-other-mismatch", action="store_true",
+                    help="Allow other allele mismatches without failing QC.")
+    ap.add_argument("--auto-normalize-on-qc-fail", action="store_true",
+                    help="If QC fails, automatically normalize the input VCF and retry.")
+
+    # --- Beagle output ---
+    ap.add_argument("--no-split-beagle-multiallelics", action="store_true",
+                    help="Disable splitting of multiallelic sites in Beagle output (not recommended).")
+
+    # --- Logging ---
+    ap.add_argument("--log-level", default="INFO",
+                    choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                    help="Logging verbosity (default: INFO).")
+
+    return ap
+
+
+def main() -> int:
+    ap = build_parser()
+    args = ap.parse_args()
+
+    from lai_pipeline.utils import setup_logging
+    setup_logging(args.log_level)
+
+    cfg = ToolConfig(
+        bcftools=args.bcftools,
+        java=args.java,
+        beagle_jar=args.beagle_jar,
+        minimac4="minimac4",
+        threads=args.threads,
+    )
+
+    templates = Templates(
+        model_sites_vcf_template=args.model_vcf_template,
+        genetic_map_template=args.genetic_map_template,
+        reference_split_template=args.reference_vcf_template,
+    )
+
+    pipe = LAIPipeline(
+        cfg,
+        templates,
+        args.workdir,
+        impute_engine=args.impute_engine,
+        window_size=1000,
+        low_cov_threshold=200,
+        qc_strict=args.qc_strict,
+        min_exact_match_pct=args.min_exact_match_pct,
+        require_zero_inversions=not args.allow_inversions,
+        require_zero_other_mismatch=not args.allow_other_mismatch,
+        reference_fasta=args.reference_fasta,
+        auto_normalize_on_qc_fail=args.auto_normalize_on_qc_fail,
+        split_beagle_multiallelics=not args.no_split_beagle_multiallelics,
+    )
+
+    stats = pipe.run(args.input_vcf)
+
+    print("\n=== SUMMARY ===")
+    for s in stats:
+        print(
+            f"  chr{s.chrom} | "
+            f"qc={'PASS' if s.qc_passed else 'FAIL'} | "
+            f"exact={s.allele_exact_match_pct:.3f}% | "
+            f"inv={s.allele_inverted} | "
+            f"other={s.allele_other_mismatch} | "
+            f"records={s.total_model_records} | "
+            f"output={s.final_model_order_vcf}"
+        )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
