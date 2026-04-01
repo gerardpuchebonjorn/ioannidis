@@ -67,7 +67,7 @@ class LAIPipeline:
 
     def reference_split_vcf_for(self, chrom: str) -> Path:
         if not self.templates.reference_split_template:
-            raise RuntimeError("--reference-split-template is required for imputation.")
+            raise RuntimeError("--reference-vcf-template is required for imputation.")
         return Path(self.templates.reference_split_template.format(chrom=chrom))
 
     def map_for(self, chrom: str) -> Optional[Path]:
@@ -246,10 +246,6 @@ class LAIPipeline:
                     phased_prefix = chrom_dir / f"target.phased.by_beagle.chr{chrom}"
                     phased_or_imputed = run_beagle_phasing(self.cfg, target_pre, phased_prefix, self.map_for(chrom))
                     phased_or_imputed = self._split_multiallelic_if_needed(phased_or_imputed, chrom, chrom_dir, tag="beagle_phased")
-
-            elif self.impute_engine == "minimac4":
-                raise RuntimeError("minimac4 path not implemented in this replacement (you were using beagle).")
-
             else:
                 raise RuntimeError(f"Unknown impute engine: {self.impute_engine}")
 
@@ -278,7 +274,7 @@ class LAIPipeline:
                     chrom=chrom,
                     input_contig=target_contig,
                     total_model_records=model_n,
-                    present_exact_in_target=-1,  # (kept for compatibility; not computed in this drop-in)
+                    present_exact_in_target=-1, 
                     qc_passed=qc_passed,
                     allele_exact_match_pct=allele_stats.exact_match_pct,
                     allele_inverted=allele_stats.inverted_ref_alt,
