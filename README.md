@@ -1,6 +1,6 @@
-# LAI Harmonization Pipeline
+# LAI Pipeline
 
-A modular, maintainable refactor of the Local Ancestry Inference (LAI) preprocessing pipeline. This tool prepares a target VCF file for inference by harmonizing it against the model's expected sites, handling contig renaming, optional normalization, phasing, imputation, and final VCF assembly in exact model record order.
+A modular, maintainable refactor of the Local Ancestry Inference (LAI) preprocessing pipeline. This README serves as a summary of what the pipeline and CLI looks like now and which changes have been made.
 
 ---
 
@@ -56,7 +56,7 @@ Rather than creating a separate logger in each module, all modules share a singl
 from lai_pipeline.utils import LOG
 ```
 
-This means `import logging` is absent from most modules — a deliberate design decision to keep logging consistent and centralized across the whole pipeline.
+This means `import logging` is absent from most modules to keep logging consistent and centralized across the whole pipeline.
 
 ---
 
@@ -69,7 +69,7 @@ The functions in `io.py` are ordered by logical level rather than following the 
 3. Data extraction (`extract_chrom_variant_vcf`)
 4. Iterators and builders (`_iter_pos_ref_alt`, `_iter_vcf_data_lines`, `build_key_to_tail_list`)
 
-In the original file these were spread out as they were added over time. The new order reflects the natural dependency flow.
+In the original file these were spread out as they were added over time (I believe).
 
 ---
 
@@ -106,8 +106,8 @@ The CLI validates inputs before starting: it checks that the input VCF exists, c
 ### CLI argument renames
 | Original | New | Reason |
 |---|---|---|
-| `--model-sites-template` | `--model-vcf-template` | Clearer — these are VCF files, not just "sites" |
-| `--reference-split-template` | `--reference-vcf-template` | Clearer — consistent naming with model argument |
+| `--model-sites-template` | `--model-vcf-template` | Clearer for me — these are VCF files, not just "sites" |
+| `--reference-split-template` | `--reference-vcf-template` | consistent naming with model argument |
 
 ### CLI arguments removed
 - **`--qc-nonstrict`** — was already marked as deprecated in the original (`"Deprecated alias; default behavior is nonstrict"`). Removed entirely.
