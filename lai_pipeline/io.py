@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from lai_pipeline.utils import LOG
+from lai_pipeline.models import ToolConfig
 
 
 def ensure_index(cfg, vcf_gz: Path, *, prefer: str = "tbi", force: bool = False) -> None:
@@ -94,6 +95,21 @@ def extract_chrom_variant_vcf(cfg, input_vcf: Path, contig: str, out_vcf: Path) 
     ]
     run(cmd)
     ensure_index(cfg, out_vcf, prefer="tbi", force=True)
+
+
+def _iter_pos_ref_alt(cfg: ToolConfig, vcf: Path) -> Iterable[Tuple[int, str, str]]:
+    proc = popen_lines([cfg.bcftools, "query", "-f", "%POS\t%REF\t%ALT\n", str(vcf)])
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        line = line.strip()
+        if not line:
+            continue
+        pos_s, ref, alt = line.split("\t")
+        yield int(pos_s), ref, alt
+    stderr = proc.stderr.read() if proc.stderr else ""
+    rc = proc.wait()
+    if rc != 0:
+        raise RuntimeError(f"bcftools query failed on {vcf} rc={rc}\nSTDERR:\n{stderr}")
 
 
 def _iter_vcf_data_lines(cfg, vcf: Path) -> Iterable[str]:

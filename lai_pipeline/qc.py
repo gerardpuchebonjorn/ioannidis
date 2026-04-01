@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Tuple, Iterable
 
 from lai_pipeline.utils import run, popen_lines, LOG
-from lai_pipeline.io import ensure_index
+from lai_pipeline.io import ensure_index, _iter_pos_ref_alt
 from lai_pipeline.models import AlleleConcordanceStats
 
 
