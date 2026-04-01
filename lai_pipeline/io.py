@@ -7,7 +7,8 @@ Reading, writing, and indexing VCF files via bcftools.
 from __future__ import annotations
 from lai_pipeline.utils import run, popen_lines, count_stream_lines, LOG
 
-import logging
+import logging, re
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 

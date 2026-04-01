@@ -9,7 +9,7 @@ from __future__ import annotations
 from lai_pipeline.utils import run, LOG
 from lai_pipeline.io import get_vcf_contigs, ensure_index
 
-import logging
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 

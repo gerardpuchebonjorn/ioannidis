@@ -6,9 +6,8 @@ Allele concordance check and VCF normalization.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
-from typing import List
+from typing import List, Tuple, Iterable
 
 from lai_pipeline.utils import run, popen_lines, LOG
 from lai_pipeline.io import ensure_index

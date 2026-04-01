@@ -6,7 +6,7 @@ Detection of phasing status in a VCF file.
 
 from __future__ import annotations
 
-import logging
+import re, subprocess
 from pathlib import Path
 
 from lai_pipeline.utils import run, LOG

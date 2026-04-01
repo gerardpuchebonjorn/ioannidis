@@ -6,9 +6,7 @@ Subprocess helpers and logging setup.
 
 from __future__ import annotations
 
-import logging
-import shlex
-import subprocess
+import logging, shlex, subprocess
 from pathlib import Path
 from typing import List, Optional
 
