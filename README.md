@@ -22,7 +22,7 @@ ioannidis/
 │   └── pipeline.py            ← LAIPipeline class: per-chromosome orchestration
 │
 ├── cli.py                     ← command-line entry point (outside the package by design)
-└── pipeline_original.py       ← original monolithic pipeline (kept for reference)
+└── pipeline_original.py       ← original pipeline (kept for reference)
 ```
 
 `cli.py` lives outside `lai_pipeline/` intentionally — it is the entry point that wires user arguments to the pipeline, not part of the library itself.
