@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 
 from lai_pipeline.utils import run, LOG
 from lai_pipeline.io import ensure_index, read_samples_from_vcf_header, build_key_to_tail_list, _iter_vcf_data_lines
-from lai_pipeline.pipeline import ToolConfig
+from lai_pipeline.models import ToolConfig
 
 
 def write_final_vcf_in_model_order(

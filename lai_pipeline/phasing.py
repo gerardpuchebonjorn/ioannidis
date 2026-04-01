@@ -10,7 +10,7 @@ import re, subprocess
 from pathlib import Path
 
 from lai_pipeline.utils import run, LOG
-from lai_pipeline.pipeline import ToolConfig
+from lai_pipeline.models import ToolConfig 
 
 
 def is_vcf_phased(cfg, vcf_gz: Path, contig: str, max_lines: int = 2000) -> bool:

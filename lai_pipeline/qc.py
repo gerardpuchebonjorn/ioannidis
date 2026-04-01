@@ -11,7 +11,7 @@ from typing import List, Tuple, Iterable
 
 from lai_pipeline.utils import run, popen_lines, LOG
 from lai_pipeline.io import ensure_index
-from lai_pipeline.pipeline import AlleleConcordanceStats
+from lai_pipeline.models import AlleleConcordanceStats
 
 
 def clean_snps_biallelic(cfg, in_vcf: Path, out_vcf: Path) -> Path:

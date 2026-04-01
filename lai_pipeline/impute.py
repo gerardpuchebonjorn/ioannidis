@@ -11,7 +11,7 @@ from typing import Optional
 
 from lai_pipeline.utils import run, LOG
 from lai_pipeline.io import ensure_index
-from lai_pipeline.pipeline import ToolConfig
+from lai_pipeline.models import ToolConfig
 
 
 def run_beagle_phasing(cfg, in_vcf: Path, out_prefix: Path, genetic_map: Optional[Path]) -> Path:

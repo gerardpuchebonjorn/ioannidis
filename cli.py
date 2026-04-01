@@ -18,7 +18,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from lai_pipeline.pipeline import LAIPipeline, ToolConfig, Templates
+from lai_pipeline.pipeline import LAIPipeline                          
+from lai_pipeline.models import ToolConfig, Templates                
 
 
 def build_parser() -> argparse.ArgumentParser:
