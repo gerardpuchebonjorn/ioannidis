@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from lai_pipeline.utils import LOG
 from lai_pipeline.pipeline import LAIPipeline                          
 from lai_pipeline.models import ToolConfig, Templates                
 
@@ -93,6 +94,35 @@ def main() -> int:
 
     from lai_pipeline.utils import setup_logging
     setup_logging(args.log_level)
+
+    LOG.info("=== LAI HARMONIZATION PIPELINE ===")
+    LOG.info("  input-vcf:              %s", args.input_vcf)
+    LOG.info("  workdir:                %s", args.workdir)
+    LOG.info("  model-vcf-template:     %s", args.model_vcf_template)
+    LOG.info("  reference-vcf-template: %s", args.reference_vcf_template or "(none)")
+    LOG.info("  reference-fasta:        %s", args.reference_fasta or "(none)")
+    LOG.info("  impute-engine:          %s", args.impute_engine)
+    LOG.info("  beagle-jar:             %s", args.beagle_jar or "(none)")
+    LOG.info("  threads:                %s", args.threads)
+    LOG.info("  qc-strict:              %s", args.qc_strict)
+    LOG.info("  log-level:              %s", args.log_level)
+    LOG.info("==================================")
+
+    # --- Input validation ---
+    if not args.input_vcf.exists():
+        print(f"Error: input VCF not found: {args.input_vcf}")
+        return 1
+
+    if not args.workdir.exists():
+        args.workdir.mkdir(parents=True, exist_ok=True)
+
+    if args.impute_engine == "beagle" and args.beagle_jar is None:
+        print("Error: --beagle-jar is required when --impute-engine is beagle.")
+        return 1
+
+    if args.beagle_jar is not None and not args.beagle_jar.exists():
+        print(f"Error: beagle JAR not found: {args.beagle_jar}")
+        return 1
 
     cfg = ToolConfig(
         bcftools=args.bcftools,
