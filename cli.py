@@ -51,8 +51,10 @@ def build_parser() -> argparse.ArgumentParser:
                          "E.g. '/data/maps/chr{chrom}.map'")
 
     # --- Imputation ---
+    
+    # minimac4 is not yet implemented but reserved for future use
     ap.add_argument("--impute-engine", choices=["beagle", "none"], default="beagle",
-                    help="Imputation engine to use (default: beagle).")
+                    help="Imputation engine to use (default: beagle). Note: minimac4 is planned but not yet implemented.")
     ap.add_argument("--beagle-jar", type=Path, default=None,
                     help="Path to Beagle JAR file (required if --impute-engine is beagle).")
 

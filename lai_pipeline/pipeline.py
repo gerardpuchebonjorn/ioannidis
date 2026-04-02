@@ -246,6 +246,8 @@ class LAIPipeline:
                     phased_prefix = chrom_dir / f"target.phased.by_beagle.chr{chrom}"
                     phased_or_imputed = run_beagle_phasing(self.cfg, target_pre, phased_prefix, self.map_for(chrom))
                     phased_or_imputed = self._split_multiallelic_if_needed(phased_or_imputed, chrom, chrom_dir, tag="beagle_phased")
+            #elif self.impute_engine == "minimac4":
+            #   raise NotImplementedError("minimac4 support is planned but not yet implemented.")
             else:
                 raise RuntimeError(f"Unknown impute engine: {self.impute_engine}")
 
