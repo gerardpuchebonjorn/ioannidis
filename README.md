@@ -111,7 +111,7 @@ The CLI validates inputs before starting: it checks that the input VCF exists, c
 
 ### CLI arguments removed
 - **`--qc-nonstrict`** — was already marked as deprecated in the original (`"Deprecated alias; default behavior is nonstrict"`). Removed entirely.
-- **`minimac4`** as an option for `--impute-engine` — not yet implemented. Reserved as a future option in the codebase but removed from the CLI choices for now.
+- **`minimac4`** as an option for `--impute-engine` — not yet implemented. Reserved as a future option in the codebase but removed from the CLI choices for now. The method itself has also been COMMENTED in pipeline.py.
 
 ### Bug fix
 - The error message inside `reference_split_vcf_for` referenced the old argument name `--reference-split-template`. Updated to `--reference-vcf-template` for consistency with the new CLI.
