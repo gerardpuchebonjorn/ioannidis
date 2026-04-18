@@ -173,9 +173,10 @@ class LAIPipeline:
             # 2) Load bundle SNP manifest, rewritten to target contig naming
             snp_df = combined_snp_manifest_for_chrom(self.bundle_dir, chrom, target_contig=target_contig)
 
-            # 3) Prepare reference VCF for Beagle
-            ref_vcf = self._prepare_ref_for_target_contig(chrom, target_contig, chrom_dir)
-
+            # 3) Prepare reference VCF for Beagle (only needed for imputation)
+            ref_vcf = None
+            if self.impute_engine != "none":
+                ref_vcf = self._prepare_ref_for_target_contig(chrom, target_contig, chrom_dir)
             # 4) Optional normalization if QC fails
             target_pre = target_chr_vcf
 
