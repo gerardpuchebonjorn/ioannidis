@@ -133,8 +133,6 @@ def build_key_to_tail_list(cfg, vcf: Path) -> Dict[Tuple[int, str, str], List[Li
     Duplicates with identical key are preserved, used to fill genotypes
     in the final VCF assembly.
 
-    Note: assumes VCF is biallelic (ALT has no comma).
-      If ALT has comma, split first with bcftools norm -m -any.
     """
     m: Dict[Tuple[int, str, str], List[List[str]]] = defaultdict(list)
     for line in _iter_vcf_data_lines(cfg, vcf):
@@ -144,9 +142,7 @@ def build_key_to_tail_list(cfg, vcf: Path) -> Dict[Tuple[int, str, str], List[Li
         pos = int(cols[1])
         ref = cols[3]
         alt = cols[4]
-        if "," in alt:
-            # If this happens, split the VCF before calling this.
-            continue
+
         tail = cols[5:]  # QUAL, FILTER, INFO, FORMAT, SAMPLES...
         m[(pos, ref, alt)].append(tail)
     return m

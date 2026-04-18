@@ -78,10 +78,6 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--auto-normalize-on-qc-fail", action="store_true",
                     help="If QC fails, automatically normalize the input VCF and retry.")
 
-    # --- Beagle output ---
-    ap.add_argument("--no-split-beagle-multiallelics", action="store_true",
-                    help="Disable splitting of multiallelic sites in Beagle output (not recommended).")
-
     # --- Logging ---
     ap.add_argument("--log-level", default="INFO",
                     choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -153,7 +149,6 @@ def main() -> int:
         require_zero_other_mismatch=not args.allow_other_mismatch,
         reference_fasta=args.reference_fasta,
         auto_normalize_on_qc_fail=args.auto_normalize_on_qc_fail,
-        split_beagle_multiallelics=not args.no_split_beagle_multiallelics,
     )
 
     stats = pipe.run(args.input_vcf)

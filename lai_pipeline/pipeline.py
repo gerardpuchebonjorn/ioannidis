@@ -43,7 +43,6 @@ class LAIPipeline:
         require_zero_other_mismatch: bool,
         reference_fasta: Optional[Path],
         auto_normalize_on_qc_fail: bool,
-        split_beagle_multiallelics: bool = True,
     ):
         self.cfg = cfg
         self.templates = templates
@@ -60,7 +59,6 @@ class LAIPipeline:
 
         self.reference_fasta = reference_fasta
         self.auto_normalize_on_qc_fail = auto_normalize_on_qc_fail
-        self.split_beagle_multiallelics = split_beagle_multiallelics
 
     def model_sites_vcf_for(self, chrom: str) -> Path:
         return Path(self.templates.model_sites_vcf_template.format(chrom=chrom))
@@ -131,17 +129,6 @@ class LAIPipeline:
         )
         return clean
 
-    def _split_multiallelic_if_needed(self, vcf: Path, chrom: str, chrom_dir: Path, tag: str) -> Path:
-        """
-        If Beagle emits multiallelics, split them so we can key-match biallelic model records.
-        """
-        if not self.split_beagle_multiallelics:
-            return vcf
-        out = chrom_dir / f"{tag}.split_biallelic.chr{chrom}.vcf.gz"
-        run([self.cfg.bcftools, "norm", "-m", "-any", "-Oz", "-o", str(out), str(vcf)])
-        ensure_index(self.cfg, out, prefer="tbi", force=True)
-        return out
-
     def _qc_gate(self, chrom: str, allele_stats: AlleleConcordanceStats) -> bool:
         failures: List[str] = []
         if allele_stats.exact_match_pct < self.min_exact_match_pct:
@@ -195,7 +182,9 @@ class LAIPipeline:
 
             # 2) Prepare model + reference contig naming to match target contig
             model_vcf = self._prepare_model_for_target_contig(chrom, target_contig, chrom_dir)
-            ref_vcf = self._prepare_ref_for_target_contig(chrom, target_contig, chrom_dir)
+            
+            if self.impute_engine != "none":
+                ref_vcf = self._prepare_ref_for_target_contig(chrom, target_contig, chrom_dir)
 
             # 3) Optional: normalize target if QC fails (or always, if you want by setting auto flag + fasta)
             target_pre = target_chr_vcf
@@ -245,7 +234,6 @@ class LAIPipeline:
                 else:
                     phased_prefix = chrom_dir / f"target.phased.by_beagle.chr{chrom}"
                     phased_or_imputed = run_beagle_phasing(self.cfg, target_pre, phased_prefix, self.map_for(chrom))
-                    phased_or_imputed = self._split_multiallelic_if_needed(phased_or_imputed, chrom, chrom_dir, tag="beagle_phased")
             #elif self.impute_engine == "minimac4":
             #   raise NotImplementedError("minimac4 support is planned but not yet implemented.")
             else:
