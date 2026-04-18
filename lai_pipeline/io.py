@@ -125,6 +125,67 @@ def _iter_vcf_data_lines(cfg, vcf: Path) -> Iterable[str]:
     if rc != 0:
         raise RuntimeError(f"bcftools view -H failed on {vcf} rc={rc}\nSTDERR:\n{stderr}")
 
+def load_bundle_manifest(bundle_dir: Path) -> dict:
+    """Load and return the bundle manifest.json."""
+    manifest_path = bundle_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Bundle manifest not found: {manifest_path}")
+    import json
+    with manifest_path.open("r") as f:
+        manifest = json.load(f)
+    LOG.info("Loaded bundle manifest: %s", manifest_path)
+    LOG.info("Bundle format=%s models=%d", manifest.get("format"), len(manifest.get("models", [])))
+    return manifest
+
+
+def bundle_entries_for_chrom(bundle_dir: Path, chrom: str) -> list:
+    """Return sorted bundle entries for a given chromosome."""
+    manifest = load_bundle_manifest(bundle_dir)
+    entries = [
+        m for m in manifest["models"]
+        if str(m["chrom"]) == str(chrom)
+    ]
+    entries = sorted(entries, key=lambda x: (999 if x["subset_idx"] is None else x["subset_idx"]))
+    if not entries:
+        raise RuntimeError(f"No bundle entries found for chr{chrom} in {bundle_dir}")
+    return entries
+
+
+def available_bundle_chroms(bundle_dir: Path) -> list:
+    """Return sorted list of chromosomes available in the bundle."""
+    manifest = load_bundle_manifest(bundle_dir)
+    chroms = sorted({str(m["chrom"]) for m in manifest["models"]}, key=lambda x: int(x))
+    return chroms
+
+
+def combined_snp_manifest_for_chrom(bundle_dir: Path, chrom: str, target_contig: Optional[str] = None):
+    """
+    Concatenate all per-subset SNP manifests for a chromosome in bundle order.
+    Returns a pandas DataFrame with columns: chrom, pos, rsid, ref, alt.
+    If target_contig is provided, overwrites the chrom column with it.
+    """
+    import pandas as pd
+    entries = bundle_entries_for_chrom(bundle_dir, chrom)
+    dfs = []
+    for e in entries:
+        p = bundle_dir / e["snp_manifest_file"]
+        if not p.exists():
+            raise FileNotFoundError(f"Missing SNP manifest file: {p}")
+        df = pd.read_csv(p, sep="\t", dtype={"chrom": str, "pos": int, "rsid": str, "ref": str, "alt": str})
+        dfs.append(df)
+
+    out = pd.concat(dfs, ignore_index=True)
+
+    if target_contig is not None:
+        out = out.copy()
+        out["chrom"] = str(target_contig)
+
+    LOG.info(
+        "Combined SNP manifest chr%s: %d rows from %d subset file(s)",
+        chrom, len(out), len(entries)
+    )
+    return out
+
 
 def build_key_to_tail_list(cfg, vcf: Path) -> Dict[Tuple[int, str, str], List[List[str]]]:
     """

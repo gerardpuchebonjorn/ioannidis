@@ -23,10 +23,9 @@ class ToolConfig:
 
 @dataclass
 class Templates:
-    """Path templates for per-chromosome model and reference files."""
-    model_sites_vcf_template: str
+    """Path templates for per-chromosome reference files."""
+    reference_split_template: Optional[str]
     genetic_map_template: Optional[str]
-    reference_split_template: Optional[str] = None
 
 
 @dataclass
@@ -34,8 +33,7 @@ class ChromStats:
     """Per-chromosome processing results."""
     chrom: str
     input_contig: str
-    total_model_records: int
-    present_exact_in_target: int
+    total_manifest_records: int
     qc_passed: bool
     allele_exact_match_pct: float
     allele_inverted: int

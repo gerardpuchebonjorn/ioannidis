@@ -7,7 +7,7 @@ Usage:
   python cli.py \
     --input-vcf path/to/input.vcf.gz \
     --workdir path/to/workdir \
-    --model-vcf-template "path/to/chr{chrom}.admx.vcf.gz" \
+    --bundle-dir path/to/pclai_bundle \
     --reference-vcf-template "path/to/chr{chrom}.snps.vcf.gz" \
     --beagle-jar path/to/beagle.jar \
     --threads 16
@@ -19,8 +19,8 @@ import argparse
 from pathlib import Path
 
 from lai_pipeline.utils import LOG
-from lai_pipeline.pipeline import LAIPipeline                          
-from lai_pipeline.models import ToolConfig, Templates                
+from lai_pipeline.pipeline import LAIPipeline
+from lai_pipeline.models import ToolConfig, Templates
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,9 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Input VCF file to harmonize (.vcf.gz).")
     ap.add_argument("--workdir", required=True, type=Path,
                     help="Directory where intermediate and output files will be saved.")
-    ap.add_argument("--model-vcf-template", required=True,
-                    help="Path template for per-chromosome model VCFs. Use {chrom} as placeholder. "
-                         "E.g. '/data/model/chr{chrom}.admx.vcf.gz'")
+    ap.add_argument("--bundle-dir", required=True, type=Path,
+                    help="Path to the PCLAI bundle directory (contains manifest.json and snp_manifests/).")
 
     # --- Optional inputs ---
     ap.add_argument("--reference-vcf-template", default=None,
@@ -51,7 +50,6 @@ def build_parser() -> argparse.ArgumentParser:
                          "E.g. '/data/maps/chr{chrom}.map'")
 
     # --- Imputation ---
-    
     # minimac4 is not yet implemented but reserved for future use
     ap.add_argument("--impute-engine", choices=["beagle", "none"], default="beagle",
                     help="Imputation engine to use (default: beagle). Note: minimac4 is planned but not yet implemented.")
@@ -96,7 +94,7 @@ def main() -> int:
     LOG.info("=== LAI HARMONIZATION PIPELINE ===")
     LOG.info("  input-vcf:              %s", args.input_vcf)
     LOG.info("  workdir:                %s", args.workdir)
-    LOG.info("  model-vcf-template:     %s", args.model_vcf_template)
+    LOG.info("  bundle-dir:             %s", args.bundle_dir)
     LOG.info("  reference-vcf-template: %s", args.reference_vcf_template or "(none)")
     LOG.info("  reference-fasta:        %s", args.reference_fasta or "(none)")
     LOG.info("  impute-engine:          %s", args.impute_engine)
@@ -109,6 +107,10 @@ def main() -> int:
     # --- Input validation ---
     if not args.input_vcf.exists():
         print(f"Error: input VCF not found: {args.input_vcf}")
+        return 1
+
+    if not args.bundle_dir.exists():
+        print(f"Error: bundle directory not found: {args.bundle_dir}")
         return 1
 
     if not args.workdir.exists():
@@ -131,18 +133,16 @@ def main() -> int:
     )
 
     templates = Templates(
-        model_sites_vcf_template=args.model_vcf_template,
-        genetic_map_template=args.genetic_map_template,
         reference_split_template=args.reference_vcf_template,
+        genetic_map_template=args.genetic_map_template,
     )
 
     pipe = LAIPipeline(
         cfg,
         templates,
+        args.bundle_dir,
         args.workdir,
         impute_engine=args.impute_engine,
-        window_size=1000,
-        low_cov_threshold=200,
         qc_strict=args.qc_strict,
         min_exact_match_pct=args.min_exact_match_pct,
         require_zero_inversions=not args.allow_inversions,
@@ -161,7 +161,7 @@ def main() -> int:
             f"exact={s.allele_exact_match_pct:.3f}% | "
             f"inv={s.allele_inverted} | "
             f"other={s.allele_other_mismatch} | "
-            f"records={s.total_model_records} | "
+            f"records={s.total_manifest_records} | "
             f"output={s.final_model_order_vcf}"
         )
 

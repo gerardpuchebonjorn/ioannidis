@@ -1,7 +1,7 @@
 """
 assembly.py
 
-Final VCF reconstruction in exact model record order.
+Final VCF reconstruction in exact SNP manifest order.
 """
 
 from __future__ import annotations
@@ -14,34 +14,34 @@ from lai_pipeline.io import ensure_index, read_samples_from_vcf_header, build_ke
 from lai_pipeline.models import ToolConfig
 
 
-def write_final_vcf_in_model_order(
+def write_final_vcf_in_manifest_order(
     cfg: ToolConfig,
     *,
     chrom: str,
-    model_vcf: Path,
+    snp_df,
     header_source_vcf: Path,
     beagle_fill_vcf: Optional[Path],
     target_fill_vcf: Path,
     out_vcf_gz: Path,
 ) -> None:
     """
-    Emit final VCF in exact MODEL record order (including duplicate POS records).
-    For each model record (POS,REF,ALT), fill FORMAT+SAMPLES from:
+    Emit final VCF in exact SNP-manifest row order.
+    For each manifest record (POS, REF, ALT), fill FORMAT + samples from:
       - beagle_fill_vcf (preferred) if available and contains exact allele
       - else target_fill_vcf if contains exact allele
       - else missing (./.)
 
-    Output is bgzipped via `bcftools view -Oz` and indexed.
+    Output is bgzipped via bcftools view -Oz and indexed.
     """
     samples = read_samples_from_vcf_header(cfg, header_source_vcf)
     n_samples = len(samples)
 
     LOG.info("FINAL assembly chr%s:", chrom)
-    LOG.info("  model_vcf        = %s", model_vcf)
-    LOG.info("  header_source    = %s", header_source_vcf)
-    LOG.info("  beagle_fill_vcf  = %s", str(beagle_fill_vcf) if beagle_fill_vcf else "(none)")
-    LOG.info("  target_fill_vcf  = %s", target_fill_vcf)
-    LOG.info("  n_samples        = %d", n_samples)
+    LOG.info("  manifest_rows     = %d", len(snp_df))
+    LOG.info("  header_source     = %s", header_source_vcf)
+    LOG.info("  beagle_fill_vcf   = %s", str(beagle_fill_vcf) if beagle_fill_vcf else "(none)")
+    LOG.info("  target_fill_vcf   = %s", target_fill_vcf)
+    LOG.info("  n_samples         = %d", n_samples)
 
     beagle_map = build_key_to_tail_list(cfg, beagle_fill_vcf) if beagle_fill_vcf else {}
     target_map = build_key_to_tail_list(cfg, target_fill_vcf)
@@ -58,19 +58,15 @@ def write_final_vcf_in_model_order(
         missing_count = 0
         beagle_used = 0
         target_used = 0
-        total_model = 0
+        total_manifest = 0
 
-        for line in _iter_vcf_data_lines(cfg, model_vcf):
-            cols = line.split("\t")
-            if len(cols) < 5:
-                continue
-
-            total_model += 1
-            chrom_s = cols[0]
-            pos = int(cols[1])
-            vid = cols[2]
-            ref = cols[3]
-            alt = cols[4]
+        for row in snp_df.itertuples(index=False):
+            total_manifest += 1
+            chrom_s = str(row.chrom)
+            pos = int(row.pos)
+            vid = str(row.rsid)
+            ref = str(row.ref)
+            alt = str(row.alt)
 
             key = (pos, ref, alt)
 
@@ -92,10 +88,10 @@ def write_final_vcf_in_model_order(
             fout.write("\t".join(out_cols) + "\n")
 
     LOG.info("FINAL assembly chr%s done:", chrom)
-    LOG.info("  total_model_records   = %d", total_model)
-    LOG.info("  filled_from_beagle    = %d", beagle_used)
-    LOG.info("  filled_from_target    = %d", target_used)
-    LOG.info("  missing_unfilled      = %d", missing_count)
+    LOG.info("  total_manifest_records = %d", total_manifest)
+    LOG.info("  filled_from_beagle     = %d", beagle_used)
+    LOG.info("  filled_from_target     = %d", target_used)
+    LOG.info("  missing_unfilled       = %d", missing_count)
 
     # Compress + index
     out_vcf_gz.parent.mkdir(parents=True, exist_ok=True)
